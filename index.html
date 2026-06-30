@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>P0/P1 Incident Analyzer — DispatchTrack</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0d1117;--surface:#161b27;--surface2:#1e2535;
+    --border:rgba(255,255,255,0.08);--border-strong:rgba(255,255,255,0.14);
+    --text:#e6edf3;--muted:#8b949e;--dim:#484f58;
+    --accent:#58a6ff;--accent-bg:rgba(88,166,255,0.1);
+    --green:#3fb950;--yellow:#d29922;--red:#f85149;--purple:#bc8cff;
+    --radius:8px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:15px;line-height:1.6}
+  .hero{border-bottom:1px solid var(--border);padding:64px 32px 56px;text-align:center;background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(88,166,255,0.08),transparent)}
+  .hero-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);background:var(--accent-bg);border:1px solid rgba(88,166,255,.2);border-radius:20px;padding:4px 14px;margin-bottom:20px}
+  .hero-title{font-size:clamp(28px,5vw,44px);font-weight:700;line-height:1.15;letter-spacing:-.02em;margin-bottom:16px}
+  .hero-title span{color:var(--accent)}
+  .hero-sub{font-size:17px;color:var(--muted);max-width:560px;margin:0 auto 32px;line-height:1.7}
+  .hero-cta{display:inline-flex;align-items:center;gap:10px;background:var(--accent);color:#0d1117;font-size:14px;font-weight:600;padding:12px 24px;border-radius:var(--radius);text-decoration:none;transition:opacity .15s}
+  .hero-cta:hover{opacity:.88}
+  .hero-cta svg{width:16px;height:16px}
+  .container{max-width:860px;margin:0 auto;padding:0 24px}
+  .section{padding:56px 0;border-bottom:1px solid var(--border)}
+  .section-label{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+  .section-title{font-size:24px;font-weight:600;margin-bottom:8px}
+  .section-sub{font-size:15px;color:var(--muted);margin-bottom:36px}
+  .steps{display:flex;flex-direction:column;gap:0}
+  .step{display:flex;gap:20px;padding:24px 0;border-bottom:1px solid var(--border)}
+  .step:last-child{border-bottom:none}
+  .step-num{width:32px;height:32px;border-radius:50%;background:var(--accent-bg);border:1px solid rgba(88,166,255,.3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--accent);flex-shrink:0;margin-top:2px}
+  .step-title{font-size:15px;font-weight:600;margin-bottom:6px}
+  .step-desc{font-size:14px;color:var(--muted);line-height:1.65}
+  .step-desc code{font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--surface2);border:1px solid var(--border-strong);border-radius:4px;padding:1px 6px;color:var(--text)}
+  .prompt-card{background:var(--surface);border:1px solid var(--border-strong);border-radius:12px;overflow:hidden;margin:28px 0}
+  .prompt-header{background:var(--surface2);padding:10px 16px;font-size:12px;font-weight:500;color:var(--muted);display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+  .prompt-copy{display:flex;align-items:center;gap:6px;background:transparent;border:1px solid var(--border-strong);color:var(--muted);border-radius:4px;padding:3px 10px;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+  .prompt-copy:hover{background:var(--accent-bg);color:var(--accent);border-color:rgba(88,166,255,.3)}
+  .prompt-body{padding:20px;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.7;color:var(--text);white-space:pre-wrap;word-break:break-word}
+  .prompt-body .k{color:var(--accent)}
+  .prompt-body .v{color:var(--green)}
+  .prompt-body .c{color:var(--muted);font-style:italic}
+  .outputs{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:28px}
+  .output-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px}
+  .output-icon{width:36px;height:36px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+  .output-icon svg{width:20px;height:20px}
+  .output-title{font-size:14px;font-weight:600;margin-bottom:5px}
+  .output-desc{font-size:13px;color:var(--muted);line-height:1.55}
+  .columns-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}
+  .col-tag{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);font-size:13px}
+  .col-tag .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+  .col-tag .required{font-size:10px;font-weight:600;color:var(--red);margin-left:auto}
+  .col-tag .optional{font-size:10px;font-weight:500;color:var(--dim);margin-left:auto}
+  .tip{display:flex;gap:14px;align-items:flex-start;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:12px;font-size:14px;color:var(--muted);line-height:1.6}
+  .tip strong{color:var(--text)}
+  .tip code{font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--surface2);border:1px solid var(--border-strong);border-radius:4px;padding:1px 6px;color:var(--text)}
+  footer{padding:32px;text-align:center;font-size:13px;color:var(--dim);border-top:1px solid var(--border)}
+  @media(max-width:600px){.hero{padding:40px 20px 36px}.columns-grid,.outputs{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="container">
+    <div class="hero-eyebrow">
+      <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="currentColor"/></svg>
+      DispatchTrack internal tool
+    </div>
+    <h1 class="hero-title">P0 / P1 incident<br><span>analysis in 3 steps</span></h1>
+    <p class="hero-sub">Export your weekly Google Sheet, paste it into Claude, and get a fully analyzed Excel report — with RCA extraction, categorization, repeat patterns, and recommendations.</p>
+    <a href="https://claude.ai" class="hero-cta" target="_blank">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      Open Claude
+    </a>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="section">
+    <div class="section-label">Workflow</div>
+    <h2 class="section-title">How to run your weekly analysis</h2>
+    <p class="section-sub">No API key. No setup. Just Claude and your CSV export.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">Export your Google Sheet as CSV</div>
+          <div class="step-desc">Open your weekly P0/P1 sheet.<br>Go to <code>File → Download → Comma Separated Values (.csv)</code> and save it.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Open Claude, upload the file, and paste the prompt</div>
+          <div class="step-desc">Go to <a href="https://claude.ai" style="color:var(--accent)">claude.ai</a>, start a new chat, attach your CSV using the paperclip button, then copy the prompt below, update the week label, and send.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">Download your Excel report</div>
+          <div class="step-desc">Claude reads every ticket, extracts RCA from comment threads, categorizes each issue, identifies repeat patterns, and produces a downloadable Excel file with 5 formatted sheets.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">The prompt</div>
+    <h2 class="section-title">Copy this into Claude every week</h2>
+    <p class="section-sub">Update the week label before sending. Everything else stays the same.</p>
+    <div class="prompt-card">
+      <div class="prompt-header">
+        <span>Weekly analysis prompt — copy and paste into Claude</span>
+        <button class="prompt-copy" onclick="copyPrompt()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          Copy
+        </button>
+      </div>
+      <div class="prompt-body" id="prompt-text">I've uploaded this week's P0/P1 incident data from DispatchTrack.
+
+<span class="c">Week label: [replace with e.g. "Week of Jun 23, 2026"]</span>
+
+Please analyze all tickets and generate a full Excel report. For each ticket:
+
+1. <span class="k">Extract the RCA from the comments</span> — look for "RCA:", "Root Cause", "*RCA*" tags in the comment columns, or infer the root cause from how the engineer described the fix. Do not rely on the RCA column alone if one exists — the real detail is in the comments.
+
+2. <span class="k">Categorize</span> into exactly one of:
+   Code bug / logic error | Infrastructure / devops | Configuration issue |
+   Integration / API issue | Data / database issue | Performance / scalability |
+   Security issue | Third-party / external | Feature gap | Unknown
+
+3. <span class="k">Flag repeat issues</span>:
+   - "Yes" — same category AND same customer appeared in another ticket this week
+   - "Possible" — same category pattern appears across multiple tickets
+   - "No" — first occurrence of this category for this customer
+
+4. <span class="k">Risk level</span> — High / Medium / Low based on customer impact and recurrence potential.
+
+5. <span class="k">Prevention action</span> — one concrete, actionable sentence per ticket.
+
+Then generate a downloadable Excel file (.xlsx) with these 5 sheets:
+
+<span class="v">Sheet 1 — Issue Analysis</span>
+Full ticket table: Issue Key, Customer, Priority, Week, Category, Sub-category,
+Repeated?, Risk, Status, Summary, RCA (extracted), Prevention Action.
+Color-code: category column by type, Repeated? column (red=Yes, yellow=Possible, green=No),
+Priority (red=P0, yellow=P1). Freeze row 1. Enable filters.
+
+<span class="v">Sheet 2 — Category Summary</span>
+One row per category: Total tickets, Confirmed Repeat, Possible Repeat, First Occurrence, % of total.
+
+<span class="v">Sheet 3 — Repeat Patterns</span>
+Group all repeated/possible tickets by category. For each group show: which customers are affected,
+all ticket keys, and a specific prevention recommendation for that category pattern.
+
+<span class="v">Sheet 4 — Customer Dashboard</span>
+One row per customer: Total, P0, P1, Repeats, Repeat %, Top Category.
+Highlight customers with P0 incidents or repeat rate above 50%.
+
+<span class="v">Sheet 5 — Insights & Recommendations</span>
+Key risks (repeat rate, import pipeline issues, config gaps) and 4-5 actionable
+product improvement recommendations based on this week's patterns.
+
+Professional formatting throughout: Arial font, color-coded badges, auto column widths, freeze panes.</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Output</div>
+    <h2 class="section-title">What's in the Excel report</h2>
+    <p class="section-sub">Five sheets, color-coded, ready to share with your team or leadership.</p>
+    <div class="outputs">
+      <div class="output-card">
+        <div class="output-icon" style="background:rgba(88,166,255,.1)"><svg viewBox="0 0 24 24" fill="none" stroke="#58a6ff" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+        <div class="output-title">Issue analysis</div>
+        <div class="output-desc">Every ticket with extracted RCA, category, repeat flag, risk, status, and prevention action. Filterable and color-coded.</div>
+      </div>
+      <div class="output-card">
+        <div class="output-icon" style="background:rgba(63,185,80,.1)"><svg viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="1.5"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-4"/></svg></div>
+        <div class="output-title">Category summary</div>
+        <div class="output-desc">Breakdown by category with confirmed repeats, possible repeats, and first occurrences at a glance.</div>
+      </div>
+      <div class="output-card">
+        <div class="output-icon" style="background:rgba(248,81,73,.1)"><svg viewBox="0 0 24 24" fill="none" stroke="#f85149" stroke-width="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <div class="output-title">Repeat patterns</div>
+        <div class="output-desc">All recurring issues grouped by category with impacted customers and specific prevention recommendations.</div>
+      </div>
+      <div class="output-card">
+        <div class="output-icon" style="background:rgba(188,140,255,.1)"><svg viewBox="0 0 24 24" fill="none" stroke="#bc8cff" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+        <div class="output-title">Customer dashboard</div>
+        <div class="output-desc">Per-customer table with total incidents, P0 count, repeat rate, and top issue category.</div>
+      </div>
+      <div class="output-card">
+        <div class="output-icon" style="background:rgba(210,153,34,.1)"><svg viewBox="0 0 24 24" fill="none" stroke="#d29922" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+        <div class="output-title">Insights</div>
+        <div class="output-desc">Auto-generated risk flags and product improvement recommendations based on the week's patterns.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Reference</div>
+    <h2 class="section-title">Column guide</h2>
+    <p class="section-sub">What Claude looks for in your CSV. Flexible naming — exact matches not required.</p>
+    <div class="columns-grid">
+      <div class="col-tag"><span class="dot" style="background:var(--red)"></span>Issue key / Jira ID<span class="required">Required</span></div>
+      <div class="col-tag"><span class="dot" style="background:var(--accent)"></span>Summary / title<span class="optional">Recommended</span></div>
+      <div class="col-tag"><span class="dot" style="background:var(--accent)"></span>Customer / account name<span class="optional">Recommended</span></div>
+      <div class="col-tag"><span class="dot" style="background:var(--accent)"></span>Priority (P0 / P1)<span class="optional">Recommended</span></div>
+      <div class="col-tag"><span class="dot" style="background:var(--green)"></span>Description<span class="optional">Optional</span></div>
+      <div class="col-tag"><span class="dot" style="background:var(--green)"></span>Week / date<span class="optional">Optional</span></div>
+      <div class="col-tag" style="grid-column:span 2"><span class="dot" style="background:var(--purple)"></span>Comment, Comment.1, Comment.2 … — all comment columns (RCA lives here)<span class="optional">Key field</span></div>
+    </div>
+  </div>
+
+  <div class="section" style="border-bottom:none">
+    <div class="section-label">Tips</div>
+    <h2 class="section-title">Getting the best results</h2>
+    <div style="margin-top:20px">
+      <div class="tip"><span style="color:var(--green);font-size:18px;line-height:1;flex-shrink:0">✓</span><div><strong>Include all comment columns</strong> — when exporting from Jira/Google Sheets make sure Comment, Comment.1, Comment.2 … are all included. The RCA is in engineer comments, not usually the description.</div></div>
+      <div class="tip"><span style="color:var(--green);font-size:18px;line-height:1;flex-shrink:0">✓</span><div><strong>Set the week label in the prompt</strong> — replace <code>[replace with e.g. "Week of Jun 23, 2026"]</code> with the actual week before sending. It shows up throughout the report.</div></div>
+      <div class="tip"><span style="color:var(--green);font-size:18px;line-height:1;flex-shrink:0">✓</span><div><strong>Upload the file, don't paste</strong> — for sheets with more than 20 tickets, uploading the CSV as an attachment gives better results than pasting raw text.</div></div>
+      <div class="tip"><span style="color:var(--green);font-size:18px;line-height:1;flex-shrink:0">✓</span><div><strong>Save every week's Excel</strong> — download and archive each report. After a few weeks, upload two reports at once and ask Claude to compare them to track whether repeat rates and category patterns are improving.</div></div>
+    </div>
+  </div>
+
+</div>
+
+<footer>Built for DispatchTrack incident management &nbsp;·&nbsp; Powered by Claude</footer>
+
+<script>
+function copyPrompt() {
+  const el = document.getElementById('prompt-text');
+  const text = el.innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.prompt-copy');
+    btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Copied!';
+    btn.style.color = 'var(--green)'; btn.style.borderColor = 'rgba(63,185,80,.4)';
+    setTimeout(() => {
+      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copy';
+      btn.style.color = ''; btn.style.borderColor = '';
+    }, 2000);
+  });
+}
+</script>
+</body>
+</html>
